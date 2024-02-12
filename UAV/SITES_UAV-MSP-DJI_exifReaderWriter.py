@@ -60,14 +60,14 @@ import xlsxwriter
 # Data to write to the sheet is handled when the actual writing is performed.
 ################################################################################################################
 # Get file paths to the multispectral UAV flight images
-directory = input("Enter file path to the folder containing multispectral DJI P4 images: ")
+directory = "mini_data"
 print ('\n')
 
 # Base folder name of data
 original = os.path.basename(directory)
 
 # Define name for excel sheet
-xlsSheet = os.path.join(directory, original + '_seq.xlsx')
+xlsSheet = 'mini_data.xlsx'
 
 # Create a new Excel file and add a worksheet.
 # Need to open here to add sunshine sensor irradiance data for all bands
@@ -83,8 +83,8 @@ roll_tag  = 'XMP:FlightRollDegree'
 pitch_tag = 'XMP:FlightPitchDegree'
 
 irr_tag   = 'XMP:Irradiance'
-lat_tag   = 'XMP:GpsLatitude'
-lon_tag   = 'XMP:GpsLongitude'
+lat_tag   = 'XMP:GPSLatitude'
+lon_tag   = 'XMP:GPSLongitude'
 alt_tag   = 'XMP:AbsoluteAltitude'
 
 bandName_tag = 'XMP:BandName'
@@ -118,16 +118,20 @@ files = pathFileList
 
 irrBandDict = {band:[] for band in ['Blue', 'Green', 'Red', 'RedEdge', 'NIR']}
 
-with exiftool.ExifTool() as et:
+with exiftool.ExifToolHelper() as et:
     # Gets metadata as a list of dictionaries
-    metadata = et.get_tags_batch(mtags, files)
+    metadata = et.get_metadata(mtags, files)
 
     for idx, file_metadata in enumerate(metadata):
+        print(f"{idx} of {len(metadata)}")
 
-        irrData = [fileList[idx], file_metadata[irr_tag], file_metadata[lat_tag], file_metadata[lon_tag],
-                   float(file_metadata[alt_tag]), float(file_metadata[roll_tag]), float(file_metadata[yaw_tag]),
-                   float(file_metadata[pitch_tag])]
-        irrBandDict[file_metadata[bandName_tag]].append(irrData)
+        try:
+            irrData = [fileList[idx], file_metadata[irr_tag], float(file_metadata[lat_tag]), float(file_metadata[lon_tag]),
+                    float(file_metadata[alt_tag]), float(file_metadata[roll_tag]), float(file_metadata[yaw_tag]),
+                    float(file_metadata[pitch_tag])]
+            irrBandDict[file_metadata[bandName_tag]].append(irrData)
+        except:
+            print(fileList[idx])
 
 ################################################################################################################
 # Writing to Excel sheet
@@ -141,6 +145,9 @@ for band in ['Blue', 'Green', 'Red', 'RedEdge', 'NIR']:
 
     # Header definition for the excel sheet
     exifData = ['Img', 'Irradiance', 'Latitude', 'Longitude', 'Altitude', 'Roll', 'Yaw', 'Pitch']
+
+    # df = pd.DataFrame(tempIrrList, columns=exifData)
+    # df.to_excel(workbook, sheet_name=band, index=False)
 
     # Adding all headings
     for col, heading in enumerate(exifData):

@@ -33,7 +33,7 @@ Instructions for running the script:
     d) Run the script and follow the instructions displayed. Provide complete file path to
        multispectral images as well as to the .xlsx file with normalizing factor for each
        of the images. The path to .xlsx file should be:
-                ...SWE-LON-SFAB-AGR-msp-210604-U01\SWE-LON-SFAB-AGR-msp-210604-U01_seq.xlsx
+                ...SWE-LON-SFAB-AGR-msp-210604-U01/SWE-LON-SFAB-AGR-msp-210604-U01_seq.xlsx
 
     e) Check all the normalized images in the same file path as the original multispectral
        images once the script is successfully completed. This images will be used for L2 &
@@ -80,10 +80,12 @@ import matplotlib.pyplot as plt
 ################################################################################################################
 # Get file paths to the multispectral UAV flight images
 ################################################################################################################
-directory = input("Enter file path to the folder containing multispectral DJI P4 images: ")
+# directory = input("Enter file path to the folder containing multispectral DJI P4 images: ")
+directory = "mini_data"
 
 # Path to .xlsx sheet with normalised sunshine sensor data
-sunshineSensorFittedExcel = input("Enter file path to .xlsx file containing normalizing factors: ")[1:-1]
+# sunshineSensorFittedExcel = input("Enter file path to .xlsx file containing normalizing factors: ")[1:-1]
+sunshineSensorFittedExcel = "mini_data_step2_TREND_order_4_Spl_5_3000"
 
 ################################################################################################################
 # Paramter setting section
@@ -97,13 +99,13 @@ splTrend = False # True means the spline trend is used, False uses the polynomia
 vigComp = True
 
 # True means images are plotted, both original and adjusted
-plotImages = False
+plotImages = True
 
 # Set verbose to True for printouts of some steps
 verbose = False
 
 # Set saveAdjImg = True if saving the adjusted images
-saveAdjImg = True
+saveAdjImg = False
 
 # Handling saturated pixels or not + threshold setting for defining saturated pixels
 checkSaturated = True # Set True to save masks per image for importing in Metashape
@@ -159,10 +161,10 @@ if saveAdjImg:
 if checkSaturated:
     # Directory for masks
     outDirMask = directory + outDirExtMask + '\\'
-    if not os.path.isdir(outDirMask):
-        os.mkdir(outDirMask)
-    else:
-        sys.exit('Warning: Directory {} exists. Make sure you are not overwriting files in output directory'.format(outDirMask))
+    # if not os.path.isdir(outDirMask):
+    #     os.mkdir(outDirMask)
+    # else:
+    #     sys.exit('Warning: Directory {} exists. Make sure you are not overwriting files in output directory'.format(outDirMask))
 
 # Opening file with trend if compensating for changing light conditions
 if adjustSunshineSensorDataFitted:
@@ -174,10 +176,10 @@ fileList = os.listdir(directory)
 fileList.sort(key = lambda x: int(x.split('_')[1])) #Sort based on image number in image name string
 
 # Bands of the camera to extract EXIF data for
-djiBandList = ['Blue', 'Green', 'Red', 'RedEdge', 'NIR']
+# djiBandList = ['Green', 'Red', 'RedEdge', 'NIR']
 
 # Band abbreviation for each individual band
-djiBandAbb = {'Blue': 'BLU', 'Green': 'GRE', 'Red': 'RED', 'RedEdge': 'REG', 'NIR': 'NIR'}
+djiBandAbb = {'Green': 'GRE', 'Red': 'RED', 'RedEdge': 'REG', 'NIR': 'NIR'}
 
 # Empty dictionary for saving max reflectance per band
 reflMaxDict = {}
@@ -186,7 +188,8 @@ reflMaxDict = {}
 # Exposure compensation, Vignetting Correction and Irradiance Normalization
 ################################################################################################################
 
-for djiBand in djiBandList:
+# for djiBand in djiBandList:
+for djiBand in djiBandAbb.values():
 
     if verbose:
         print ('Currently handling band: {}'.format(djiBand))
@@ -209,7 +212,7 @@ for djiBand in djiBandList:
     # Removing files that are not image files and selecting files per band
     arr = []
     for f in fileList:
-        if ('TIF' in f) and djiBandAbb[djiBand] in f and not '.enp' in f: # checking not enp (Envi file)
+        if ('TIF' in f) and  djiBand in f and not '.enp' in f: # checking not enp (Envi file)
             arr.append(f)
 
     files = [os.path.join(directory, f) for f in arr]
@@ -217,8 +220,8 @@ for djiBand in djiBandList:
     ############################################################################################################
     # Reading EXIF data from the image
     ############################################################################################################
-    with exiftool.ExifTool() as et:
-        metadata_ALL = et.get_tags_batch(tags, files)
+    with exiftool.ExifToolHelper() as et:
+        metadata_ALL = et.get_metadata(tags, files)
 
     ############################################################################################################
     # Extract various metadata tags for vignetting correction
@@ -230,7 +233,7 @@ for djiBand in djiBandList:
     k0, k1, k2, k3, k4, k5 = poly_coeff
 
     # Extract black level tag
-    black_level = metadata_ALL[0]['EXIF:BlackLevel']
+    black_level = metadata_ALL[0]['XMP:BlackLevel']
 
     # Extract the X and Y coordinates of center of vignette in pixels
     CenterX = metadata_ALL[0]['XMP:CalibratedOpticalCenterX']

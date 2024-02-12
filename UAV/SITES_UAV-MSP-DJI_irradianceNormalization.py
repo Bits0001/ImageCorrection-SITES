@@ -29,7 +29,7 @@ Instructions for running the script:
     d) Run the script and follow the instructions displayed until the best fit polynomial/spline
        is achieved. Set 'saveTrend' to True and run the script again. When defining the path it
        should be something like:
-                ...SWE-LON-SFAB-AGR-msp-210604-U01\SWE-LON-SFAB-AGR-msp-210604-U01_seq.xlsx
+                ...SWE-LON-SFAB-AGR-msp-210604-U01/SWE-LON-SFAB-AGR-msp-210604-U01_seq.xlsx
     e) Check .xlsx sheet with irradiance normalization factor for both polynomial and spline fit
        once the script is successfully completed.
 
@@ -55,22 +55,23 @@ import numpy as np
 import pandas as pd
 from scipy import interpolate
 import matplotlib.pyplot as plt
+from pathlib import Path
 
 ################################################################################################################
 # Get complete file path of .xlsx sheet from Step 1
 # This excel sheet contains the extracted sunshine sensor irradiance data for a multispectral flight
-fp = input("Enter complete file path to the raw irradiance data (.xlsx from Step 1): ")
+file_path = Path("mini_data_step2.xlsx")
 
 ################################################################################################################
 # Define order for a polynomial and spline fit
 # Spline smoothing: lower number => closer to data
 ################################################################################################################
-polyOrder = 5
+polyOrder = 4
 splOrder = 5
 splSmooth = 3000
 
 # Reading excel sheet
-exifData = pd.ExcelFile(fp)
+exifData = pd.ExcelFile(file_path)
 
 # Saving trend or not
 # Set True to save
@@ -78,12 +79,8 @@ saveTrend = False
 
 ################################################################################################################
 if saveTrend:
-    # Creating new Excel for saving the fitted polynomials
-    fb = fp.split('.')[0]
-
     # Define file name for excel sheet to save the normalized irradiance data
-    newExcel = fb + '_TREND' + '_order_' + str(polyOrder) + '_Spl_' + str(splOrder) + '_'
-    + str(splSmooth) + '.xlsx'
+    newExcel = file_path.stem + '_TREND' + '_order_' + str(polyOrder) + '_Spl_' + str(splOrder) + '_' + str(splSmooth) + '.xlsx'
 
     # Create a new excel file and add a worksheet.
     # Need to open here to add normalization factor for all bands
@@ -91,7 +88,7 @@ if saveTrend:
 
 ################################################################################################################
 # List with bands (Excel sheets to read)
-seqBandList = ['Blue', 'Green', 'Red', 'RedEdge', 'NIR']
+seqBandList = ['Green', 'Red', 'RedEdge', 'NIR']
 
 for idx, band in enumerate(seqBandList):
 
@@ -100,11 +97,11 @@ for idx, band in enumerate(seqBandList):
     irr = bandSheet['Irradiance']
     img = bandSheet['Img']
 
-    x = range(1,len(irr)+1)
+    x = np.arange(start=1, stop=len(irr)+1, step=1)
     coeffs = np.polyfit(x, irr, polyOrder)
     irrFit = np.polyval(coeffs, x)
 
-    print(fp + ',\nBand: ' + band)
+    print(str(file_path) + ',\nBand: ' + band)
     print('PolyOrder: ' + str(polyOrder))
     plt.plot(irr)
     plt.plot(irrFit)
@@ -129,7 +126,7 @@ for idx, band in enumerate(seqBandList):
 
     # Normalising spline trend
     splm = np.mean(splFit)
-    splNormTrend = splFit/splm
+    splNormTrend = splFit / splm
 
     plt.plot(xOut, splFit, color='orange')
     plt.plot(xIn, irr, 'b')
