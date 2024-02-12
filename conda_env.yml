@@ -1,0 +1,14 @@
+name: sites
+dependencies:
+  - python=3.7.6
+  - xlsxwriter
+  - scipy
+  - pandas
+  - numpy
+  - matplotlib
+  - openpyxl
+  - pyarrow
+  - conda-forge:
+    - gdal
+  - pip:
+    - pyexiftool
