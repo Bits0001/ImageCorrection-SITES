@@ -8,6 +8,10 @@ Before running the scripts, you need to install the following programs:
 
 - [Anaconda](https://www.anaconda.com/download)
 - [Visual Studio Code](https://code.visualstudio.com/download)
+- [exiftool](https://exiftool.org/install.html)
+    - Windows: Download the Windows Executable and add the directory to your PATH
+    - MacOS: Install via Homebrew: `brew install exiftool`
+    - Linux: Install via package manager: `sudo apt-get install libimage-exiftool-perl`
 
 After installing Anaconda and Visual Studio Code, open the project folder in Visual Studio Code.
 

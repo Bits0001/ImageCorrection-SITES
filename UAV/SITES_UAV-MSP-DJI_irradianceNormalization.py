@@ -60,7 +60,7 @@ from pathlib import Path
 ################################################################################################################
 # Get complete file path of .xlsx sheet from Step 1
 # This excel sheet contains the extracted sunshine sensor irradiance data for a multispectral flight
-file_path = Path("mini_data_step2.xlsx")
+file_path = Path("data.xlsx")
 
 ################################################################################################################
 # Define order for a polynomial and spline fit
@@ -75,7 +75,7 @@ exifData = pd.ExcelFile(file_path)
 
 # Saving trend or not
 # Set True to save
-saveTrend = False
+saveTrend = True
 
 ################################################################################################################
 if saveTrend:
@@ -103,9 +103,9 @@ for idx, band in enumerate(seqBandList):
 
     print(str(file_path) + ',\nBand: ' + band)
     print('PolyOrder: ' + str(polyOrder))
-    plt.plot(irr)
-    plt.plot(irrFit)
-    plt.show()
+    # plt.plot(irr)
+    # plt.plot(irrFit)
+    # plt.show()
 
     # Normalising polynomial trend
     tm = np.mean(irrFit)
@@ -128,9 +128,9 @@ for idx, band in enumerate(seqBandList):
     splm = np.mean(splFit)
     splNormTrend = splFit / splm
 
-    plt.plot(xOut, splFit, color='orange')
-    plt.plot(xIn, irr, 'b')
-    plt.show()
+    # plt.plot(xOut, splFit, color='orange')
+    # plt.plot(xIn, irr, 'b')
+    # plt.show()
 
     ############################################################################################################
     if saveTrend:

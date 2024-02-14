@@ -60,14 +60,14 @@ import xlsxwriter
 # Data to write to the sheet is handled when the actual writing is performed.
 ################################################################################################################
 # Get file paths to the multispectral UAV flight images
-directory = "mini_data"
+directory = "data"
 print ('\n')
 
 # Base folder name of data
 original = os.path.basename(directory)
 
 # Define name for excel sheet
-xlsSheet = 'mini_data.xlsx'
+xlsSheet = 'data.xlsx'
 
 # Create a new Excel file and add a worksheet.
 # Need to open here to add sunshine sensor irradiance data for all bands
@@ -116,14 +116,14 @@ files = pathFileList
 # NB! the lists must be initiated inside the loop to clear data from previous bands
 ################################################################################################################
 
-irrBandDict = {band:[] for band in ['Blue', 'Green', 'Red', 'RedEdge', 'NIR']}
+irrBandDict = {band:[] for band in ['Green', 'Red', 'RedEdge', 'NIR']}
 
 with exiftool.ExifToolHelper() as et:
     # Gets metadata as a list of dictionaries
-    metadata = et.get_metadata(mtags, files)
+    metadata = et.get_metadata(files)
 
     for idx, file_metadata in enumerate(metadata):
-        print(f"{idx} of {len(metadata)}")
+        print(f"{idx + 1} of {len(metadata)}")
 
         try:
             irrData = [fileList[idx], file_metadata[irr_tag], float(file_metadata[lat_tag]), float(file_metadata[lon_tag]),
@@ -138,7 +138,7 @@ with exiftool.ExifToolHelper() as et:
 # Adjust to get the data of interest
 ################################################################################################################
 
-for band in ['Blue', 'Green', 'Red', 'RedEdge', 'NIR']:
+for band in ['Green', 'Red', 'RedEdge', 'NIR']:
     worksheet = workbook.add_worksheet(band)
 
     tempIrrList = irrBandDict[band]

@@ -76,16 +76,18 @@ import numpy as np
 import pandas as pd
 from osgeo import gdal
 import matplotlib.pyplot as plt
+from pathlib import Path
 
 ################################################################################################################
 # Get file paths to the multispectral UAV flight images
 ################################################################################################################
 # directory = input("Enter file path to the folder containing multispectral DJI P4 images: ")
-directory = "mini_data"
+data_dir = Path("data")
+out_dir = Path("/media/ext_hdd/bianca")
 
 # Path to .xlsx sheet with normalised sunshine sensor data
 # sunshineSensorFittedExcel = input("Enter file path to .xlsx file containing normalizing factors: ")[1:-1]
-sunshineSensorFittedExcel = "mini_data_step2_TREND_order_4_Spl_5_3000"
+sunshineSensorFittedExcel = "data_TREND_order_4_Spl_5_3000.xlsx"
 
 ################################################################################################################
 # Paramter setting section
@@ -99,13 +101,13 @@ splTrend = False # True means the spline trend is used, False uses the polynomia
 vigComp = True
 
 # True means images are plotted, both original and adjusted
-plotImages = True
+plotImages = False
 
 # Set verbose to True for printouts of some steps
-verbose = False
+verbose = True
 
 # Set saveAdjImg = True if saving the adjusted images
-saveAdjImg = False
+saveAdjImg = True
 
 # Handling saturated pixels or not + threshold setting for defining saturated pixels
 checkSaturated = True # Set True to save masks per image for importing in Metashape
@@ -149,22 +151,21 @@ tags = [irradiance, imgName_tag, opticalCenterRelX, opticalCenterRelY, calOptica
 
 ################################################################################################################
 # Creating path of directory for output
-outDir = directory + outDirExt + '\\'
+out_dir_img = Path(out_dir) / outDirExt
 
-if saveAdjImg:
+# if saveAdjImg:
     # Creating directory if it does not exist
-    if not os.path.isdir(outDir):
-        os.mkdir(outDir)
-    else:
-        sys.exit('Warning: Directory {} exists. Make sure you are not overwriting files in output directory'.format(outDir))
-
-if checkSaturated:
-    # Directory for masks
-    outDirMask = directory + outDirExtMask + '\\'
-    # if not os.path.isdir(outDirMask):
-    #     os.mkdir(outDirMask)
+    # if not os.path.isdir(out_dir_img):
+    #     os.mkdir(out_dir_img)
     # else:
-    #     sys.exit('Warning: Directory {} exists. Make sure you are not overwriting files in output directory'.format(outDirMask))
+    #     sys.exit('Warning: Directory {} exists. Make sure you are not overwriting files in output directory'.format(out_dir_img))
+
+out_dir_mask = out_dir / outDirExtMask
+# if checkSaturated:
+#     if not out_dir_mask.exists():
+#         out_dir_mask.mkdir()
+#     else:
+#         sys.exit('Warning: Directory {} exists. Make sure you are not overwriting files in output directory'.format(out_dir_mask))
 
 # Opening file with trend if compensating for changing light conditions
 if adjustSunshineSensorDataFitted:
@@ -172,14 +173,14 @@ if adjustSunshineSensorDataFitted:
 
 ################################################################################################################
 # Getting a list of the files in the directory
-fileList = os.listdir(directory)
-fileList.sort(key = lambda x: int(x.split('_')[1])) #Sort based on image number in image name string
+fileList = list(data_dir.iterdir())
+fileList.sort(key = lambda x: int(str(x.stem).split('_')[1])) #Sort based on image number in image name string
 
 # Bands of the camera to extract EXIF data for
 # djiBandList = ['Green', 'Red', 'RedEdge', 'NIR']
 
 # Band abbreviation for each individual band
-djiBandAbb = {'Green': 'GRE', 'Red': 'RED', 'RedEdge': 'REG', 'NIR': 'NIR'}
+djiBandAbb = {'Green': 'G', 'Red': 'R', 'RedEdge': 'RE', 'NIR': 'NIR'}
 
 # Empty dictionary for saving max reflectance per band
 reflMaxDict = {}
@@ -189,7 +190,7 @@ reflMaxDict = {}
 ################################################################################################################
 
 # for djiBand in djiBandList:
-for djiBand in djiBandAbb.values():
+for djiBand in []:#djiBandAbb.values():
 
     if verbose:
         print ('Currently handling band: {}'.format(djiBand))
@@ -209,19 +210,13 @@ for djiBand in djiBandAbb.values():
 
     maxRefl = 0 # To save max reflectance for a band to convert to uint16 later
 
-    # Removing files that are not image files and selecting files per band
-    arr = []
-    for f in fileList:
-        if ('TIF' in f) and  djiBand in f and not '.enp' in f: # checking not enp (Envi file)
-            arr.append(f)
-
-    files = [os.path.join(directory, f) for f in arr]
+    files = [f for f in fileList if f.suffix == '.TIF' and djiBand in f.stem.split("_")[-1]]
 
     ############################################################################################################
     # Reading EXIF data from the image
     ############################################################################################################
     with exiftool.ExifToolHelper() as et:
-        metadata_ALL = et.get_metadata(tags, files)
+        metadata_ALL = et.get_metadata(files)
 
     ############################################################################################################
     # Extract various metadata tags for vignetting correction
@@ -279,7 +274,7 @@ for djiBand in djiBandAbb.values():
             # Saves the mask for import in Agisoft
             driver = gdal.GetDriverByName('Gtiff')
             # uint8 not available with the driver byte but gives 0-255
-            dataset = driver.Create(outDirMask + imgName.split('.')[0] +'_mask.tif', ncols, nrows, 1, gdal.GDT_Byte)
+            dataset = driver.Create(str(out_dir_mask / (imgName.split('.')[0] +'_mask.tif')), ncols, nrows, 1, gdal.GDT_Byte)
             dataset.GetRasterBand(1).WriteArray(imarray)
             dataset = None # "Closing" the driver
 
@@ -328,8 +323,7 @@ for djiBand in djiBandAbb.values():
         if saveAdjImg:
             # Define name of output file.
             # Removing .TIF extension since matplotlib does not handle 1-band tiffs
-            fn = files[idx].split('\\')[-1].split('.')[0]
-            outImg = outDir + fn
+            outImg = out_dir_img / files[idx].name
 
             # Matplotlib imsave gives 3-band tiffs.
             # Instead saving temporary as npy files.
@@ -347,6 +341,8 @@ for djiBand in djiBandAbb.values():
     # Store maximum reflectance per band
     reflMaxDict[djiBand] = maxRefl
 
+# reflMaxDict={'G': 37, 'R': 28, 'RE': 42, 'NIR': 28}
+
 ################################################################################################################
 # Converting images from float to uint16 and stretching to get full range
 # NB!!!! GDAL sets float values <0 to max in uint16
@@ -356,29 +352,28 @@ for key in reflMaxDict:
     # Rounding down to nearest ones
     reflMaxDict[key] = math.floor(satThres/(reflMaxDict[key]*1.0))*1
 
-imgFileList = os.listdir(outDir)
-imgFileList.sort(key = lambda x: int(x.split('_')[1]))
+imgFileList = list(out_dir_img.iterdir())
+imgFileList.sort(key = lambda x: int(x.stem.split('_')[1]))
 
 for im in imgFileList:
 
     # Reading and converting image to uint16
-    imarray = np.load(outDir + im)
-    tempExt = im.split('.')[0].split('_')[-1] # To get band (BLU, GRE, RED, REG, NIR)
+    imarray = np.load(im)
+    tempExt = im.stem.split('_')[-1] # To get band (BLU, GRE, RED, REG, NIR)
 
     # Need to remove negative values otherwise GDAL sets them to max.
-    imarray = imarray * reflMaxDict[list(djiBandAbb.keys())[list(djiBandAbb.values()).index(tempExt)]]
+    imarray = imarray * reflMaxDict[tempExt]
     imarray[np.isnan(imarray)] = 65535 # uint cannot handle nan so setting to max value
     imarray[imarray < 0] = 0
     imarray = imarray.astype(np.uint16)
 
-    os.remove(outDir + im) # Removing old version of file
-    im = im.split('.')[0]  # To remove the .npy extension
+    im.unlink()
 
     # GDAL version saving directly to tiff
     nrows, ncols = np.shape(imarray)
 
     driver = gdal.GetDriverByName('Gtiff')
-    dataset = driver.Create(outDir + im +'.tif', ncols, nrows, 1, gdal.GDT_UInt16)
+    dataset = driver.Create(out_dir_img / (im.stem +'.tif'), ncols, nrows, 1, gdal.GDT_UInt16)
 
     dataset.GetRasterBand(1).WriteArray(imarray)
 
@@ -389,11 +384,11 @@ for im in imgFileList:
 ################################################################################################################
 if copyEXIF:
     # Exiftool commands
-    exifArgEXIF = 'exiftool -tagsFromFile ' + directory + '\\' + '%f.tif' + ' -all:all ' + outDir
-    exifArgXMP = 'exiftool -tagsFromFile ' + directory + '\\' + '%f.tif' + ' -xmp ' + outDir
+    exifArgEXIF = 'exiftool -tagsFromFile ' + str(data_dir) + '\\' + '%f.tif' + ' -all:all ' + str(out_dir_img)
+    exifArgXMP = 'exiftool -tagsFromFile ' + str(data_dir) + '\\' + '%f.tif' + ' -xmp ' + str(out_dir_img)
 
-    exifArgEXIFList = ['exiftool', '-tagsFromFile', directory + '\\' + '%f.tif', '-all:all ' + outDir]
-    exifArgXMPList = ['exiftool', '-tagsFromFile', directory + '\\' + '%f.tif', '-xmp ' + outDir]
+    exifArgEXIFList = ['exiftool', '-tagsFromFile', str(data_dir) + '\\' + '%f.tif', '-all:all ' + str(out_dir_img)]
+    exifArgXMPList = ['exiftool', '-tagsFromFile', str(data_dir) + '\\' + '%f.tif', '-xmp ' + str(out_dir_img)]
 
     # Run the command line scripts in the terminal
     os.system(exifArgEXIF)
